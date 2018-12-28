@@ -4,11 +4,42 @@
 <title>Brown's Bridge</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="w3.css">
-<link rel="stylesheet" href="font-awesome-4/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--<link rel="stylesheet" href="w3.css">-->
+<!--<link rel="stylesheet" href="font-awesome-4/css/font-awesome.min.css">-->
+
+<style>
+    .header {
+        color: #fff !important;
+        background-color: #2196F3 !important
+    }
+
+    .content {
+        padding: 16px;
+    }
+
+    .sticky {
+        position: fixed;
+        top: 0;
+        width: 100%;
+    }
+
+    .sticky + .content {
+        padding-top: 102px;
+    }
+</style>
 
 <script type="text/javascript">
+
     var players = [];
+    var tricksPerHand = [5, 4, 3, 2, 1, 2, 3, 4, 5, -1];
+    var handsPerGame = 9;
+    var gameCtrl = {
+        curHand: 0,
+        curPlayer: 0,
+        curAction: "BID"
+    };
 
     function addPlayer() {
         var e = document.getElementById("new_player_name");
@@ -18,7 +49,7 @@
         if (id.length > 0) {
             localStorage.setItem(id, "");
             players.push({id: id, hands: [], score: 0});
-            updateRosterDisplay();
+            updateRoster();
             updateScoreCard();
         }
     }
@@ -26,7 +57,7 @@
     function removePlayer(index) {
         var removed = players.splice(index, 1);
         localStorage.removeItem(removed[0].id);
-        updateRosterDisplay();
+        updateRoster();
         updateScoreCard();
     }
 
@@ -35,7 +66,7 @@
         var temp = players[index + 1];
         players[index + 1] = players[index];
         players[index] = temp;
-        updateRosterDisplay();
+        updateRoster();
     }
 
     function movePlayerUp(index) {
@@ -43,10 +74,10 @@
         var temp = players[index - 1];
         players[index - 1] = players[index];
         players[index] = temp;
-        updateRosterDisplay();
+        updateRoster();
     }
 
-    function updateRosterDisplay() {
+    function updateRoster() {
         var child = document.getElementById("manage_players_roster");
         var ih = "";
 
@@ -82,63 +113,68 @@
     }
 
     function rosterToCache() {
-        for(var i = 0; i < players.length; i++) {
+        for (var i = 0; i < players.length; i++) {
             localStorage.setItem(players[i].id, "");
         }
     }
 
-    function toggleElement(e) {
-        if (e.className.indexOf("w3-show") === -1) {
-            e.className += " w3-show";
-        } else {
-            e.className = e.className.replace(" w3-show", "");
-        }
-    }
-
-    function showElement(e) {
+    function show(id) {
+        var e = document.getElementById(id);
         if (e.className.indexOf("w3-show") === -1) {
             e.className += " w3-show";
         }
     }
 
-    function hideElement(e) {
+    function hide(id) {
+        var e = document.getElementById(id);
         if (e.className.indexOf("w3-show") >= 0) {
             e.className = e.className.replace(" w3-show", "");
         }
     }
+
+    var MENU_OFF = "off";
+    var MENU_CHOOSE = "choose";
+    var MENU_ROSTER = "roster";
+    var menuState = MENU_OFF;
 
     function onMenuClick() {
-        var e = document.getElementById("manage_players");
-        if (e.className.indexOf("w3-show") >= 0) {
-            e.className = e.className.replace(" w3-show", "");
-            return;
+        if (menuState === MENU_OFF) {
+            hide("game_controls");
+            hide("manage_players");
+            hide("player_scores");
+            show("menu");
+            menuState = MENU_CHOOSE;
+        } else if (menuState === MENU_CHOOSE) {
+            show("game_controls");
+            show("player_scores");
+            hide("menu");
+            hide("manage_players");
+            menuState = MENU_OFF;
+        } else if (menuState === MENU_ROSTER) {
+            hide("game_controls");
+            hide("player_scores");
+            show("menu");
+            hide("manage_players");
+            menuState = MENU_CHOOSE;
         }
-        toggleElement(document.getElementById("menu"));
-    }
-
-    function hideMenu() {
-        hideElement(document.getElementById("menu"));
     }
 
     function managePlayers() {
-        hideMenu();
-        updateRosterDisplay();
-        showElement(document.getElementById("manage_players"));
+        hide("game_controls");
+        hide("player_scores");
+        hide("menu");
+        updateRoster();
+        show("manage_players");
+        menuState = MENU_ROSTER;
     }
-
-    var tricksPerHand = [5,4,3,2,1,2,3,4,5,-1];
-    var handsPerGame = 9;
-    var gameCtrl = {
-        curHand: 0,
-        curPlayer: 0,
-        curAction: "BID"
-    };
 
 
     function newGame() {
-        hideMenu();
+        hide("menu");
+        hide("manage_players");
+        menuState = MENU_OFF;
 
-        for(var i = 0; i < players.length; i++) {
+        for (var i = 0; i < players.length; i++) {
             players[i].hands = [];
             players[i].score = 0;
         }
@@ -148,45 +184,12 @@
         gameCtrl.handsPerGame = 9;
         newScoreCard();
         updateGameControls();
+        show("game_controls");
+        show("player_scores");
     }
 
-    function previousHand() {
-        if(gameCtrl.curHand > 0) {
-            gameCtrl.curHand--;
-        } else {
-            gameCtrl.curHand = handsPerGame - 1;
-        }
-        updateGameControls();
-    }
-
-    function nextHand() {
-        if(gameCtrl.curHand === handsPerGame - 1) {
-            gameCtrl.curHand = 0;
-        } else {
-            gameCtrl.curHand++;
-        }
-        updateGameControls();
-    }
-
-    function previousPlayer() {
-        if(gameCtrl.curPlayer > 0) {
-            gameCtrl.curPlayer--;
-        } else {
-            gameCtrl.curPlayer = players.length - 1;
-        }
-        updateGameControls();
-    }
-
-    function nextPlayer() {
-        if (gameCtrl.curPlayer < players.length - 1) {
-            gameCtrl.curPlayer++;
-        } else {
-            gameCtrl.curPlayer = 0;
-        }
-        updateGameControls();
-    }
     function nextAction() {
-        if(gameCtrl.curAction === "BID") {
+        if (gameCtrl.curAction === "BID") {
             gameCtrl.curAction = "TAKE";
         } else {
             gameCtrl.curAction = "BID";
@@ -197,49 +200,49 @@
     function onActionValue(value) {
         var h = players[gameCtrl.curPlayer].hands;
 
-        if(h.length < gameCtrl.curHand) {
+        if (h.length < gameCtrl.curHand) {
             alert("too far ahead");
             gameCtrl.curHand = h.length;
             updateGameControls();
             return;
         }
 
-        if ( gameCtrl.curAction === "BID") {
+        if (gameCtrl.curAction === "BID") {
 
-            if(typeof h[gameCtrl.curHand] === 'undefined' ) {
+            if (typeof h[gameCtrl.curHand] === 'undefined') {
                 h[gameCtrl.curHand] = {bid: value};
             } else {
                 h[gameCtrl.curHand].bid = value;
             }
 
         } else if (gameCtrl.curAction === "TAKE") {
-            if(typeof h[gameCtrl.curHand] === 'undefined' ) {
+            if (typeof h[gameCtrl.curHand] === 'undefined') {
                 return;
             }
             h[gameCtrl.curHand].take = value;
             calculateCurrentPlayerScore()
         }
         cycle();
-        updateScoreCard();
         updateGameControls();
-        //localStorage.setItem("players", JSON.stringify(players));
-        //localStorage.setItem("control", JSON.stringify(gameCtrl));
+        updateScoreCard();
+//        var e = document.getElementById("player-summary-" +gameCtrl.curPlayer);
+//        e.scrollIntoView(false);
     }
 
     function cycle() {
 
-        if(gameCtrl.curPlayer === players.length - 1) {
+        if (gameCtrl.curPlayer === players.length - 1) {
 
-            if(gameCtrl.curAction === "TAKE") {
-
-                if(gameCtrl.curHand < handsPerGame) {
-                    gameCtrl.curAction = "BID";
-                    gameCtrl.curHand++;
-                }
-
-            } else {
-                gameCtrl.curAction = "TAKE";
-            }
+    //            if (gameCtrl.curAction === "TAKE") {
+    //
+    //                if (gameCtrl.curHand < handsPerGame) {
+    //                    gameCtrl.curAction = "BID";
+    //                    gameCtrl.curHand++;
+    //                }
+    //
+    //            } else {
+    //                gameCtrl.curAction = "TAKE";
+    //            }
             gameCtrl.curPlayer = 0;
 
         } else {
@@ -247,13 +250,14 @@
             gameCtrl.curPlayer++;
 
         }
+
     }
 
     function calculateCurrentPlayerScore() {
         var p = players[gameCtrl.curPlayer];
         p.score = 0;
-        for(var i = 0; i < p.hands.length; i++) {
-            if(p.hands[i].bid === p.hands[i].take) {
+        for (var i = 0; i < p.hands.length; i++) {
+            if (p.hands[i].bid === p.hands[i].take) {
                 p.score += 10;
                 p.score += p.hands[i].take;
             } else {
@@ -263,59 +267,65 @@
         }
     }
 
-    var CLASS_CUR_ACTION = " w3-cell-middle ";
+    //    var CLASS_CUR_ACTION = " w3-cell-middle w3-padding";
+    var CLASS_CUR_ACTION = "w3-bar-item w3-button";
     var CLASS_BID_HILITE = " w3-blue-grey ";
     var CLASS_TAKE_HILITE = " w3-black ";
+
     function updateGameControls() {
 
         var e;
 
-        if(gameCtrl.curAction === "GAME OVER") {
-            e = document.getElementById("cur_action");
-            e.innerHTML = gameCtrl.curAction;
-            e = document.getElementById("cur_hand_num");
-            e.innerHTML = "";
-            e = document.getElementById("cur_hand_img");
-            e.className = "";
-            e = document.getElementById("cur_available_action");
-            e.innerHTML = "&nbsp;";
-            return;
-        }
+        updateCurrentBid();
 
-        e = document.getElementById("cur_hand_num");
-        e.innerHTML = tricksPerHand[gameCtrl.curHand];
+        if (gameCtrl.curAction === "BID") {
 
-        var s = "w3-cell-middle fa ";
-
-        e = document.getElementById("cur_hand_img");
-        if ( gameCtrl.curHand < 4) {
-            s += "fa-arrow-circle-down";
-        } else {
-            s += "fa-arrow-circle-up";
-        }
-        e.className = s;
-
-        e = document.getElementById("cur_player_name");
-        e.innerHTML = players[gameCtrl.curPlayer].id;
-
-        e = document.getElementById("cur_action");
-        e.innerHTML = gameCtrl.curAction;
-        if(gameCtrl.curAction === "BID") {
+            e = document.getElementById("action_bid");
             e.className = CLASS_CUR_ACTION + CLASS_BID_HILITE;
-        } else if(gameCtrl.curAction === "TAKE") {
+
+            e = document.getElementById("action_take");
+            e.className = CLASS_CUR_ACTION;
+
+        } else {
+
+            e = document.getElementById("action_bid");
+            e.className = CLASS_CUR_ACTION;
+
+            e = document.getElementById("action_take");
             e.className = CLASS_CUR_ACTION + CLASS_TAKE_HILITE;
+
         }
 
 
         e = document.getElementById("cur_available_action");
-        s = "";
+        var s = "";
         var totalTricks = tricksPerHand[gameCtrl.curHand];
-        for(var i = 0; i <= totalTricks; i++) {
-            s += '<button onclick="onActionValue(' +i+ ')" class="w3-button w3-large">' +i+ '</button>';
+        for (var i = 0; i <= totalTricks; i++) {
+            s += '<div onclick="onActionValue(' + i + ')" class="w3-bar-item w3-button w3-large">' + i + '</div>';
         }
         e.innerHTML = s;
 
         highlightCurDetail();
+    }
+
+    function updateCurrentBid() {
+        var e;
+        var totalBid = 0;
+        for (var i = 0; i < players.length; i++) {
+
+            var h = players[i].hands;
+            if (h.length === 0) {
+                continue;
+            }
+
+            if (typeof  h[gameCtrl.curHand] === "undefined") { continue; }
+
+            totalBid += h[gameCtrl.curHand].bid;
+        }
+
+        e = document.getElementById("action_bid");
+        e.innerHTML = "BID" + "&nbsp;&nbsp;(" + totalBid + ")";
+
     }
 
     function highlightCurDetail() {
@@ -326,7 +336,7 @@
 
                 var s = CLASS_PLAYER_DETAIL_CELL;
                 if (gameCtrl.curPlayer === i && gameCtrl.curHand === j) {
-                    if(gameCtrl.curAction === "BID") {
+                    if (gameCtrl.curAction === "BID") {
                         s += CLASS_BID_HILITE;
                     } else {
                         s += CLASS_TAKE_HILITE;
@@ -354,7 +364,7 @@
                 '  <div class="w3-cell-row w3-text-light-blue">';
 
             for (var j = 0; j < handsPerGame; j++) {
-                ih += '<div  onclick="editDetail('+i+','+j+')" id="player-'+i+'-hand-'+j+'" class="' +CLASS_PLAYER_DETAIL_CELL+ '">&nbsp;&nbsp;:&nbsp;&nbsp;</div>';
+                ih += '<div  onclick="editDetail(' + i + ',' + j + ')" id="player-' + i + '-hand-' + j + '" class="' + CLASS_PLAYER_DETAIL_CELL + '">&nbsp;&nbsp;:&nbsp;&nbsp;</div>';
             }
             ih += '  </div>';
             ih += '</div>';
@@ -381,18 +391,18 @@
 
 
             var h = players[i].hands;
-            if(h.length === 0) {
+            if (h.length === 0) {
                 continue;
             }
 
             for (var j = 0; j < handsPerGame; j++) {
 
-                e = document.getElementById("player-" +i+ "-hand-" +j);
-                if(typeof  h[j] === "undefined") { continue; }
+                e = document.getElementById("player-" + i + "-hand-" + j);
+                if (typeof  h[j] === "undefined") { continue; }
 
 
                 var s = h[j].bid + ":";
-                if(h[j].take !== undefined) {
+                if (h[j].take !== undefined) {
                     s += h[j].take;
                 } else {
                     s += "&nbsp;&nbsp;"
@@ -403,64 +413,10 @@
         }
     }
 
-//    function updateScoreCard() {
-//        var e = document.getElementById("player_scores");
-//        var ih = "";
-//
-//        for (var i = 0; i < players.length; i++) {
-//            var style = "w3-container w3-padding";
-//            if(i === gameCtrl.curPlayer) {
-//                style += " w3-blue-gray";
-//            }
-//            ih +=
-//                '<div class="' +style+ '">' +
-//                '  <div id="player-summary-' + i + '" class="w3-cell-row">' +
-//                '    <div class="w3-cell w3-cell-middle">' + players[i].id + '</div>' +
-//                '    <div class="w3-cell w3-cell-middle w3-right">' + players[i].score + '</div>' +
-//                '  </div>';
-//
-//            ih +=
-//                '  <div id="player-detail-' + i + '" class="w3-cell-row w3-text-light-blue">';
-//            var space = "";
-//            var h = players[i].hands;
-//            if(h.length === 0) {
-//                ih += "&nbsp;&nbsp;"
-//            }
-//            for (var j = 0; j < h.length; j++) {
-//                if(typeof  h[j] === "undefined") { continue; }
-//                ih += space;
-//                ih += h[j].bid;
-//                if(h[j].take !== undefined) {
-//                    ih += ",";
-//                    ih += h[j].take;
-//                }
-//                space = "&nbsp;&nbsp;";
-//            }
-//            ih += '  </div>';
-//            ih += '</div>';
-//        }
-//
-//        e.innerHTML = ih;
-//    }
-//
-
     function init() {
-//        players = JSON.parse(localStorage.get("players"));
-//        gameCtrl = JSON.parse(localStorage.get("control"));
-
         rosterFromCache();
-//        players.push({id: "Tim", hands: [], score: 0});
-//        players.push({id: "Tom", hands: [], score: 0});
-//        players.push({id: "Chay", hands: [], score: 0});
-//        players.push({id: "Clay", hands: [], score: 0});
         newGame();
-//        updateGameControls();
-//        newScoreCard();
-//        updateScoreCard();
     }
-
-
-
 
 </script>
 
@@ -468,12 +424,25 @@
 <body class="w3-blue" onload="init();">
 
 <!-- Top container -->
+<div id="header" class="header">
 
-<div class="w3-bar w3-black">
-    <button class="w3-bar-item w3-button"
-            onclick="onMenuClick();"><i class="fa fa-bars"></i></button>
-    <div class="w3-bar-item w3-right">Brown's Bridge</div>
+
+    <div class="w3-bar w3-black">
+        <button class="w3-bar-item w3-button"
+                onclick="onMenuClick();"><i class="fa fa-bars"></i></button>
+        <div class="w3-bar-item w3-right">Brown's Bridge</div>
+    </div>
+
+    <div id="game_controls" class="w3-hide">
+        <div class="w3-bar">
+            <div id="action_bid" class="w3-bar-item w3-button" onclick="nextAction();">BID</div>
+            <div id="action_take" class="w3-bar-item w3-button" onclick="nextAction();">TAKE</div>
+        </div>
+        <div id="cur_available_action" class="w3-bar w3-border-bottom"></div>
+    </div>
+
 </div>
+
 <div id="menu" class="w3-dropdown-content w3-bar-block w3-black">
     <button onclick="newGame();" class="w3-bar-item w3-button">New Game</button>
     <button onclick="managePlayers();" class="w3-bar-item w3-button">Players</button>
@@ -507,149 +476,26 @@
     });
 </script>
 
-<div id="game_controls">
-    <div class="w3-cell-row">
-        <div class="w3-cell">
-            <a onclick="previousHand();" class="w3-button">
-                <i class="fa fa-arrow-left"></i>
-            </a>
-            <span class="w3-cell-middle">Hand</span>
-            <span id="cur_hand_num" class="w3-cell-middle"> 5</span>
-            <i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>
-            <a onclick="nextHand();" class="w3-button">
-                <i class="fa fa-arrow-right"></i>
-            </a>
-        </div>
-    </div>
-
-    <div class="w3-cell-row ">
-        <div class="w3-cell">
-            <a onclick="previousPlayer();" class="w3-button">
-                <i class="fa fa-arrow-left"></i>
-            </a>
-            <span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>
-            <a onclick="nextPlayer();" class="w3-button">
-                <i class="fa fa-arrow-right"></i>
-            </a>
-        </div>
-    </div>
-
-    <div class="w3-cell-row ">
-        <div class="w3-cell">
-            <a onclick="nextAction();" class="w3-button">
-                <i class="fa fa-arrow-left"></i>
-            </a>
-            <span id="cur_action" class="w3-cell-middle">&nbsp;</span>
-            <a onclick="nextAction();" class="w3-button">
-                <i class="fa fa-arrow-right"></i>
-            </a>
-        </div>
-    </div>
-
-    <div class="w3-cell-row ">
-        <div id="cur_available_action" class="w3-cell"></div>
-    </div>
-
+<div id="player_scores" class="content w3-hide">
 </div>
 
-<!--<div id="game_controls">-->
 
-    <!--<div class="w3-bar">-->
-        <!--<div id="cur_action" class="w3-bar-item">&nbsp;</div>-->
-        <!--<div class="w3-bar-item w3-right">-->
-            <!--<span class="w3-cell-middle">Hand</span>-->
-            <!--<span id="cur_hand_num" class="w3-cell-middle"></span>-->
-            <!--<i id="cur_hand_img"></i>-->
-        <!--</div>-->
-    <!--</div>-->
+<script>
+    window.onscroll = function () {
+        scrollHeader()
+    };
 
-    <!--<div class="w3-bar ">-->
-        <!--<div id="cur_available_action" class="w3-bar-item"></div>-->
-    <!--</div>-->
+    function scrollHeader() {
+        var header = document.getElementById("header");
+        var sticky = header.offsetTop;
 
-<!--</div>-->
-
-<!--<div id="game_controls">-->
-
-    <!--<div class="w3-cell-row w3-container">-->
-        <!--<div id="cur_action" class="w3-cell w3-cell-middle">-->
-<!--\        </div>-->
-        <!--<div class="w3-cell w3-right">-->
-            <!--<span class="w3-cell-middle">Hand</span>-->
-            <!--<span id="cur_hand_num" class="w3-cell-middle"></span>-->
-            <!--<i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>-->
-        <!--</div>-->
-    <!--</div>-->
-
-    <!--&lt;!&ndash;<div class="w3-cell-row ">&ndash;&gt;-->
-            <!--&lt;!&ndash;<span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>&ndash;&gt;-->
-    <!--&lt;!&ndash;</div>&ndash;&gt;-->
-
-    <!--<div class="w3-cell-row ">-->
-        <!--<div id="cur_available_action" class="w3-cell"></div>-->
-    <!--</div>-->
-
-<!--</div>-->
-
-<!--<div id="gameCtrl" class="w3-container w3-center">-->
-
-    <!--<div class="w3-cell-row">-->
-        <!--<div class="w3-cell">-->
-            <!--<a onclick="previousHand();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-left"></i>-->
-            <!--</a>-->
-            <!--<span class="w3-cell-middle">Hand</span>-->
-            <!--<span id="cur_hand_num" class="w3-cell-middle"> 5</span>-->
-            <!--<i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>-->
-            <!--<a onclick="nextHand();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-right"></i>-->
-            <!--</a>-->
-        <!--</div>-->
-    <!--</div>-->
-
-    <!--<div class="w3-cell-row ">-->
-        <!--<div class="w3-cell">-->
-            <!--<a onclick="previousPlayer();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-left"></i>-->
-            <!--</a>-->
-            <!--<span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>-->
-            <!--<a onclick="nextPlayer();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-right"></i>-->
-            <!--</a>-->
-        <!--</div>-->
-    <!--</div>-->
-
-    <!--<div class="w3-cell-row ">-->
-        <!--<div class="w3-cell">-->
-            <!--<a onclick="nextAction();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-left"></i>-->
-            <!--</a>-->
-            <!--<span id="cur_action" class="w3-cell-middle">&nbsp;</span>-->
-            <!--<a onclick="nextAction();" class="w3-button">-->
-                <!--<i class="fa fa-arrow-right"></i>-->
-            <!--</a>-->
-        <!--</div>-->
-    <!--</div>-->
-
-    <!--<div class="w3-cell-row">-->
-        <!--<div class="w3-cell w3-center">-->
-            <!--<button onclick="onActionValue(0)" class="w3-button w3-small">0</button>-->
-            <!--<button onclick="onActionValue(1)" class="w3-button w3-small">1</button>-->
-            <!--<button onclick="onActionValue(2)" class="w3-button w3-small">2</button>-->
-            <!--<button onclick="onActionValue(3)" class="w3-button w3-small">3</button>-->
-            <!--<button onclick="onActionValue(4)" class="w3-button w3-small">4</button>-->
-            <!--<button onclick="onActionValue(5)" class="w3-button w3-small">5</button>-->
-        <!--</div>-->
-    <!--</div>-->
-
-<!--</div>-->
-
-<div id="player_scores">
-</div>
-
-<div id="playground">
-
-</div>
+        if (window.pageYOffset > sticky) {
+            header.classList.add("sticky");
+        } else {
+            header.classList.remove("sticky");
+        }
+    }
+</script>
 
 </body>
 </html>
