@@ -233,16 +233,16 @@
 
         if (gameCtrl.curPlayer === players.length - 1) {
 
-    //            if (gameCtrl.curAction === "TAKE") {
-    //
-    //                if (gameCtrl.curHand < handsPerGame) {
-    //                    gameCtrl.curAction = "BID";
-    //                    gameCtrl.curHand++;
-    //                }
-    //
-    //            } else {
-    //                gameCtrl.curAction = "TAKE";
-    //            }
+            if (gameCtrl.curAction === "TAKE") {
+
+                if (gameCtrl.curHand < handsPerGame) {
+                    gameCtrl.curAction = "BID";
+                    gameCtrl.curHand++;
+                }
+
+            } else {
+                gameCtrl.curAction = "TAKE";
+            }
             gameCtrl.curPlayer = 0;
 
         } else {
