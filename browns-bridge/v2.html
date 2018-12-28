@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<title>Brown's Bridge</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="w3.css">
+<link rel="stylesheet" href="font-awesome-4/css/font-awesome.min.css">
+
+<script type="text/javascript">
+    var players = [];
+
+    function addPlayer() {
+        var e = document.getElementById("new_player_name");
+        var id = e.value;
+        e.value = "";
+
+        if (id.length > 0) {
+            localStorage.setItem(id, "");
+            players.push({id: id, hands: [], score: 0});
+            updateRosterDisplay();
+            updateScoreCard();
+        }
+    }
+
+    function removePlayer(index) {
+        var removed = players.splice(index, 1);
+        localStorage.removeItem(removed[0].id);
+        updateRosterDisplay();
+        updateScoreCard();
+    }
+
+    function movePlayerDown(index) {
+        if (index < 0 || index > players.length - 2) { return; }
+        var temp = players[index + 1];
+        players[index + 1] = players[index];
+        players[index] = temp;
+        updateRosterDisplay();
+    }
+
+    function movePlayerUp(index) {
+        if (index < 1 || index > players.length - 1) { return; }
+        var temp = players[index - 1];
+        players[index - 1] = players[index];
+        players[index] = temp;
+        updateRosterDisplay();
+    }
+
+    function updateRosterDisplay() {
+        var child = document.getElementById("manage_players_roster");
+        var ih = "";
+
+        for (var i = 0; i < players.length; i++) {
+            ih += '<div class="w3-bar">';
+
+            ih += '<div class="w3-bar-item">';
+            ih += '<button class="w3-button w3-padding-small" onclick="removePlayer(' + i + ');">';
+            ih += '<i class="fa fa-minus"></i>';
+            ih += '</button>';
+            ih += '<button class="w3-button w3-padding-small" onclick="movePlayerDown(' + i + ');">';
+            ih += '<i class="fa fa-arrow-down"></i>';
+            ih += '</button>';
+            ih += '<button class="w3-button w3-padding-small" onclick="movePlayerUp(' + i + ');">';
+            ih += '<i class="fa fa-arrow-up"></i>';
+            ih += '</button>';
+            ih += '</div>';
+
+            ih += '<div class="w3-bar-item">';
+            ih += players[i].id;
+            ih += '</div>';
+
+            ih += '</div>';
+        }
+        child.innerHTML = ih;
+    }
+
+    function rosterFromCache() {
+        for (var i = 0; i < localStorage.length; i++) {
+            players.push({id: localStorage.key(i), hands: [], score: 0});
+
+        }
+    }
+
+    function rosterToCache() {
+        for(var i = 0; i < players.length; i++) {
+            localStorage.setItem(players[i].id, "");
+        }
+    }
+
+    function toggleElement(e) {
+        if (e.className.indexOf("w3-show") === -1) {
+            e.className += " w3-show";
+        } else {
+            e.className = e.className.replace(" w3-show", "");
+        }
+    }
+
+    function showElement(e) {
+        if (e.className.indexOf("w3-show") === -1) {
+            e.className += " w3-show";
+        }
+    }
+
+    function hideElement(e) {
+        if (e.className.indexOf("w3-show") >= 0) {
+            e.className = e.className.replace(" w3-show", "");
+        }
+    }
+
+    function onMenuClick() {
+        var e = document.getElementById("manage_players");
+        if (e.className.indexOf("w3-show") >= 0) {
+            e.className = e.className.replace(" w3-show", "");
+            return;
+        }
+        toggleElement(document.getElementById("menu"));
+    }
+
+    function hideMenu() {
+        hideElement(document.getElementById("menu"));
+    }
+
+    function managePlayers() {
+        hideMenu();
+        updateRosterDisplay();
+        showElement(document.getElementById("manage_players"));
+    }
+
+    var tricksPerHand = [5,4,3,2,1,2,3,4,5,-1];
+    var handsPerGame = 9;
+    var gameCtrl = {
+        curHand: 0,
+        curPlayer: 0,
+        curAction: "BID"
+    };
+
+
+    function newGame() {
+        hideMenu();
+
+        for(var i = 0; i < players.length; i++) {
+            players[i].hands = [];
+            players[i].score = 0;
+        }
+        gameCtrl.curHand = 0;
+        gameCtrl.curPlayer = 0;
+        gameCtrl.curAction = "BID";
+        gameCtrl.handsPerGame = 9;
+        newScoreCard();
+        updateGameControls();
+    }
+
+    function previousHand() {
+        if(gameCtrl.curHand > 0) {
+            gameCtrl.curHand--;
+        } else {
+            gameCtrl.curHand = handsPerGame - 1;
+        }
+        updateGameControls();
+    }
+
+    function nextHand() {
+        if(gameCtrl.curHand === handsPerGame - 1) {
+            gameCtrl.curHand = 0;
+        } else {
+            gameCtrl.curHand++;
+        }
+        updateGameControls();
+    }
+
+    function previousPlayer() {
+        if(gameCtrl.curPlayer > 0) {
+            gameCtrl.curPlayer--;
+        } else {
+            gameCtrl.curPlayer = players.length - 1;
+        }
+        updateGameControls();
+    }
+
+    function nextPlayer() {
+        if (gameCtrl.curPlayer < players.length - 1) {
+            gameCtrl.curPlayer++;
+        } else {
+            gameCtrl.curPlayer = 0;
+        }
+        updateGameControls();
+    }
+    function nextAction() {
+        if(gameCtrl.curAction === "BID") {
+            gameCtrl.curAction = "TAKE";
+        } else {
+            gameCtrl.curAction = "BID";
+        }
+        updateGameControls();
+    }
+
+    function onActionValue(value) {
+        var h = players[gameCtrl.curPlayer].hands;
+
+        if(h.length < gameCtrl.curHand) {
+            alert("too far ahead");
+            gameCtrl.curHand = h.length;
+            updateGameControls();
+            return;
+        }
+
+        if ( gameCtrl.curAction === "BID") {
+
+            if(typeof h[gameCtrl.curHand] === 'undefined' ) {
+                h[gameCtrl.curHand] = {bid: value};
+            } else {
+                h[gameCtrl.curHand].bid = value;
+            }
+
+        } else if (gameCtrl.curAction === "TAKE") {
+            if(typeof h[gameCtrl.curHand] === 'undefined' ) {
+                return;
+            }
+            h[gameCtrl.curHand].take = value;
+            calculateCurrentPlayerScore()
+        }
+        cycle();
+        updateScoreCard();
+        updateGameControls();
+        //localStorage.setItem("players", JSON.stringify(players));
+        //localStorage.setItem("control", JSON.stringify(gameCtrl));
+    }
+
+    function cycle() {
+
+        if(gameCtrl.curPlayer === players.length - 1) {
+
+            if(gameCtrl.curAction === "TAKE") {
+
+                if(gameCtrl.curHand < handsPerGame) {
+                    gameCtrl.curAction = "BID";
+                    gameCtrl.curHand++;
+                }
+
+            } else {
+                gameCtrl.curAction = "TAKE";
+            }
+            gameCtrl.curPlayer = 0;
+
+        } else {
+
+            gameCtrl.curPlayer++;
+
+        }
+    }
+
+    function calculateCurrentPlayerScore() {
+        var p = players[gameCtrl.curPlayer];
+        p.score = 0;
+        for(var i = 0; i < p.hands.length; i++) {
+            if(p.hands[i].bid === p.hands[i].take) {
+                p.score += 10;
+                p.score += p.hands[i].take;
+            } else {
+                p.score -= 10;
+                p.score -= Math.max(p.hands[i].bid, p.hands[i].take);
+            }
+        }
+    }
+
+    var CLASS_CUR_ACTION = " w3-cell-middle ";
+    var CLASS_BID_HILITE = " w3-blue-grey ";
+    var CLASS_TAKE_HILITE = " w3-black ";
+    function updateGameControls() {
+
+        var e;
+
+        if(gameCtrl.curAction === "GAME OVER") {
+            e = document.getElementById("cur_action");
+            e.innerHTML = gameCtrl.curAction;
+            e = document.getElementById("cur_hand_num");
+            e.innerHTML = "";
+            e = document.getElementById("cur_hand_img");
+            e.className = "";
+            e = document.getElementById("cur_available_action");
+            e.innerHTML = "&nbsp;";
+            return;
+        }
+
+        e = document.getElementById("cur_hand_num");
+        e.innerHTML = tricksPerHand[gameCtrl.curHand];
+
+        var s = "w3-cell-middle fa ";
+
+        e = document.getElementById("cur_hand_img");
+        if ( gameCtrl.curHand < 4) {
+            s += "fa-arrow-circle-down";
+        } else {
+            s += "fa-arrow-circle-up";
+        }
+        e.className = s;
+
+        e = document.getElementById("cur_player_name");
+        e.innerHTML = players[gameCtrl.curPlayer].id;
+
+        e = document.getElementById("cur_action");
+        e.innerHTML = gameCtrl.curAction;
+        if(gameCtrl.curAction === "BID") {
+            e.className = CLASS_CUR_ACTION + CLASS_BID_HILITE;
+        } else if(gameCtrl.curAction === "TAKE") {
+            e.className = CLASS_CUR_ACTION + CLASS_TAKE_HILITE;
+        }
+
+
+        e = document.getElementById("cur_available_action");
+        s = "";
+        var totalTricks = tricksPerHand[gameCtrl.curHand];
+        for(var i = 0; i <= totalTricks; i++) {
+            s += '<button onclick="onActionValue(' +i+ ')" class="w3-button w3-large">' +i+ '</button>';
+        }
+        e.innerHTML = s;
+
+        highlightCurDetail();
+    }
+
+    function highlightCurDetail() {
+
+        for (var i = 0; i < players.length; i++) {
+
+            for (var j = 0; j < handsPerGame; j++) {
+
+                var s = CLASS_PLAYER_DETAIL_CELL;
+                if (gameCtrl.curPlayer === i && gameCtrl.curHand === j) {
+                    if(gameCtrl.curAction === "BID") {
+                        s += CLASS_BID_HILITE;
+                    } else {
+                        s += CLASS_TAKE_HILITE;
+                    }
+                }
+                var e = document.getElementById("player-" + i + "-hand-" + j);
+                e.className = s;
+            }
+        }
+    }
+
+    function newScoreCard() {
+        var e = document.getElementById("player_scores");
+        var ih = "";
+
+        for (var i = 0; i < players.length; i++) {
+            ih +=
+                '<div id="player-summary-' + i + '" class="w3-container w3-padding">' +
+                '  <div class="w3-cell-row">' +
+                '    <div class="w3-cell w3-cell-middle">' + players[i].id + '</div>' +
+                '    <div id="player-score-' + i + '" class="w3-cell w3-cell-middle w3-right">' + players[i].score + '</div>' +
+                '  </div>';
+
+            ih +=
+                '  <div class="w3-cell-row w3-text-light-blue">';
+
+            for (var j = 0; j < handsPerGame; j++) {
+                ih += '<div  onclick="editDetail('+i+','+j+')" id="player-'+i+'-hand-'+j+'" class="' +CLASS_PLAYER_DETAIL_CELL+ '">&nbsp;&nbsp;:&nbsp;&nbsp;</div>';
+            }
+            ih += '  </div>';
+            ih += '</div>';
+        }
+
+        e.innerHTML = ih;
+    }
+
+    function editDetail(player, hand) {
+        gameCtrl.curPlayer = player;
+        gameCtrl.curHand = hand;
+        updateGameControls();
+
+    }
+
+    var CLASS_PLAYER_DETAIL_CELL = "w3-cell w3-center w3-border";
+
+    function updateScoreCard() {
+        var e;
+
+        for (var i = 0; i < players.length; i++) {
+            e = document.getElementById("player-score-" + i);
+            e.innerHTML = players[i].score;
+
+
+            var h = players[i].hands;
+            if(h.length === 0) {
+                continue;
+            }
+
+            for (var j = 0; j < handsPerGame; j++) {
+
+                e = document.getElementById("player-" +i+ "-hand-" +j);
+                if(typeof  h[j] === "undefined") { continue; }
+
+
+                var s = h[j].bid + ":";
+                if(h[j].take !== undefined) {
+                    s += h[j].take;
+                } else {
+                    s += "&nbsp;&nbsp;"
+                }
+                e.innerHTML = s;
+
+            }
+        }
+    }
+
+//    function updateScoreCard() {
+//        var e = document.getElementById("player_scores");
+//        var ih = "";
+//
+//        for (var i = 0; i < players.length; i++) {
+//            var style = "w3-container w3-padding";
+//            if(i === gameCtrl.curPlayer) {
+//                style += " w3-blue-gray";
+//            }
+//            ih +=
+//                '<div class="' +style+ '">' +
+//                '  <div id="player-summary-' + i + '" class="w3-cell-row">' +
+//                '    <div class="w3-cell w3-cell-middle">' + players[i].id + '</div>' +
+//                '    <div class="w3-cell w3-cell-middle w3-right">' + players[i].score + '</div>' +
+//                '  </div>';
+//
+//            ih +=
+//                '  <div id="player-detail-' + i + '" class="w3-cell-row w3-text-light-blue">';
+//            var space = "";
+//            var h = players[i].hands;
+//            if(h.length === 0) {
+//                ih += "&nbsp;&nbsp;"
+//            }
+//            for (var j = 0; j < h.length; j++) {
+//                if(typeof  h[j] === "undefined") { continue; }
+//                ih += space;
+//                ih += h[j].bid;
+//                if(h[j].take !== undefined) {
+//                    ih += ",";
+//                    ih += h[j].take;
+//                }
+//                space = "&nbsp;&nbsp;";
+//            }
+//            ih += '  </div>';
+//            ih += '</div>';
+//        }
+//
+//        e.innerHTML = ih;
+//    }
+//
+
+    function init() {
+//        players = JSON.parse(localStorage.get("players"));
+//        gameCtrl = JSON.parse(localStorage.get("control"));
+
+        rosterFromCache();
+//        players.push({id: "Tim", hands: [], score: 0});
+//        players.push({id: "Tom", hands: [], score: 0});
+//        players.push({id: "Chay", hands: [], score: 0});
+//        players.push({id: "Clay", hands: [], score: 0});
+        newGame();
+//        updateGameControls();
+//        newScoreCard();
+//        updateScoreCard();
+    }
+
+
+
+
+</script>
+
+
+<body class="w3-blue" onload="init();">
+
+<!-- Top container -->
+
+<div class="w3-bar w3-black">
+    <button class="w3-bar-item w3-button"
+            onclick="onMenuClick();"><i class="fa fa-bars"></i></button>
+    <div class="w3-bar-item w3-right">Brown's Bridge</div>
+</div>
+<div id="menu" class="w3-dropdown-content w3-bar-block w3-black">
+    <button onclick="newGame();" class="w3-bar-item w3-button">New Game</button>
+    <button onclick="managePlayers();" class="w3-bar-item w3-button">Players</button>
+</div>
+
+<div id="manage_players" class="w3-hide">
+    <div class="w3-bar w3-black">
+        <div class="w3-bar-item">
+            <button id="add_player_btn" class="w3-button w3-padding-small"
+                    onclick="addPlayer();"><i class="fa fa-plus"></i></button>
+        </div>
+        <div class="w3-bar-item">
+            <input id="new_player_name" type="text"/>
+        </div>
+    </div>
+    <div id="manage_players_roster" class="w3-black"></div>
+</div>
+
+<script>
+    var input = document.getElementById("new_player_name");
+
+    // Execute a function when the user releases a key on the keyboard
+    input.addEventListener("keyup", function (event) {
+        // Cancel the default action, if needed
+        event.preventDefault();
+        // Number 13 is the "Enter" key on the keyboard
+        if (event.keyCode === 13) {
+            // Trigger the button element with a click
+            document.getElementById("add_player_btn").click();
+        }
+    });
+</script>
+
+<div id="game_controls">
+    <div class="w3-cell-row">
+        <div class="w3-cell">
+            <a onclick="previousHand();" class="w3-button">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+            <span class="w3-cell-middle">Hand</span>
+            <span id="cur_hand_num" class="w3-cell-middle"> 5</span>
+            <i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>
+            <a onclick="nextHand();" class="w3-button">
+                <i class="fa fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="w3-cell-row ">
+        <div class="w3-cell">
+            <a onclick="previousPlayer();" class="w3-button">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+            <span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>
+            <a onclick="nextPlayer();" class="w3-button">
+                <i class="fa fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="w3-cell-row ">
+        <div class="w3-cell">
+            <a onclick="nextAction();" class="w3-button">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+            <span id="cur_action" class="w3-cell-middle">&nbsp;</span>
+            <a onclick="nextAction();" class="w3-button">
+                <i class="fa fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="w3-cell-row ">
+        <div id="cur_available_action" class="w3-cell"></div>
+    </div>
+
+</div>
+
+<!--<div id="game_controls">-->
+
+    <!--<div class="w3-bar">-->
+        <!--<div id="cur_action" class="w3-bar-item">&nbsp;</div>-->
+        <!--<div class="w3-bar-item w3-right">-->
+            <!--<span class="w3-cell-middle">Hand</span>-->
+            <!--<span id="cur_hand_num" class="w3-cell-middle"></span>-->
+            <!--<i id="cur_hand_img"></i>-->
+        <!--</div>-->
+    <!--</div>-->
+
+    <!--<div class="w3-bar ">-->
+        <!--<div id="cur_available_action" class="w3-bar-item"></div>-->
+    <!--</div>-->
+
+<!--</div>-->
+
+<!--<div id="game_controls">-->
+
+    <!--<div class="w3-cell-row w3-container">-->
+        <!--<div id="cur_action" class="w3-cell w3-cell-middle">-->
+<!--\        </div>-->
+        <!--<div class="w3-cell w3-right">-->
+            <!--<span class="w3-cell-middle">Hand</span>-->
+            <!--<span id="cur_hand_num" class="w3-cell-middle"></span>-->
+            <!--<i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>-->
+        <!--</div>-->
+    <!--</div>-->
+
+    <!--&lt;!&ndash;<div class="w3-cell-row ">&ndash;&gt;-->
+            <!--&lt;!&ndash;<span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>&ndash;&gt;-->
+    <!--&lt;!&ndash;</div>&ndash;&gt;-->
+
+    <!--<div class="w3-cell-row ">-->
+        <!--<div id="cur_available_action" class="w3-cell"></div>-->
+    <!--</div>-->
+
+<!--</div>-->
+
+<!--<div id="gameCtrl" class="w3-container w3-center">-->
+
+    <!--<div class="w3-cell-row">-->
+        <!--<div class="w3-cell">-->
+            <!--<a onclick="previousHand();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-left"></i>-->
+            <!--</a>-->
+            <!--<span class="w3-cell-middle">Hand</span>-->
+            <!--<span id="cur_hand_num" class="w3-cell-middle"> 5</span>-->
+            <!--<i id="cur_hand_img" class="fa fa-arrow-circle-down w3-cell-middle"></i>-->
+            <!--<a onclick="nextHand();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-right"></i>-->
+            <!--</a>-->
+        <!--</div>-->
+    <!--</div>-->
+
+    <!--<div class="w3-cell-row ">-->
+        <!--<div class="w3-cell">-->
+            <!--<a onclick="previousPlayer();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-left"></i>-->
+            <!--</a>-->
+            <!--<span id="cur_player_name" class="w3-cell-middle">&nbsp;</span>-->
+            <!--<a onclick="nextPlayer();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-right"></i>-->
+            <!--</a>-->
+        <!--</div>-->
+    <!--</div>-->
+
+    <!--<div class="w3-cell-row ">-->
+        <!--<div class="w3-cell">-->
+            <!--<a onclick="nextAction();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-left"></i>-->
+            <!--</a>-->
+            <!--<span id="cur_action" class="w3-cell-middle">&nbsp;</span>-->
+            <!--<a onclick="nextAction();" class="w3-button">-->
+                <!--<i class="fa fa-arrow-right"></i>-->
+            <!--</a>-->
+        <!--</div>-->
+    <!--</div>-->
+
+    <!--<div class="w3-cell-row">-->
+        <!--<div class="w3-cell w3-center">-->
+            <!--<button onclick="onActionValue(0)" class="w3-button w3-small">0</button>-->
+            <!--<button onclick="onActionValue(1)" class="w3-button w3-small">1</button>-->
+            <!--<button onclick="onActionValue(2)" class="w3-button w3-small">2</button>-->
+            <!--<button onclick="onActionValue(3)" class="w3-button w3-small">3</button>-->
+            <!--<button onclick="onActionValue(4)" class="w3-button w3-small">4</button>-->
+            <!--<button onclick="onActionValue(5)" class="w3-button w3-small">5</button>-->
+        <!--</div>-->
+    <!--</div>-->
+
+<!--</div>-->
+
+<div id="player_scores">
+</div>
+
+<div id="playground">
+
+</div>
+
+</body>
+</html>
